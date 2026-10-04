@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireSession } from '@/lib/tenant';
+import { requireApiSession } from '@/lib/http';
 import { makeExport, allocationExportRows, mappingExportRows } from '@/lib/exports';
 import { coverageGaps } from '@/lib/coverage';
 import { laneAlternatives, aggregatedCostProfile } from '@/lib/cost-engine';
@@ -9,7 +9,7 @@ import { compareRateCards } from '@/lib/rate-analysis';
 import { runScenario } from '@/lib/scenario';
 
 export async function GET(req:Request,{params}:{params:Promise<{type:string}>}){
-  const session=await requireSession(); const {type}=await params; const u=new URL(req.url);
+  const session=await requireApiSession(req); const {type}=await params; const u=new URL(req.url);
   const asOf=new Date(u.searchParams.get('asOf')||Date.now()); const filters=u.searchParams.toString();
   let sheets:{name:string;rows:Record<string,unknown>[]}[]=[]; let reference=type;
   if(type==='allocations'){
