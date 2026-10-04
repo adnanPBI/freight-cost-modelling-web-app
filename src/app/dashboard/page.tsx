@@ -1,2 +1,23 @@
-import {AppShell} from '@/components/AppShell'; import {PageHeader,Kpi} from '@/components/Page'; import {AuthGate} from '@/components/AuthGate';
-export default async function Dashboard(){await AuthGate();return <AppShell><PageHeader eyebrow="Network control" title="Dashboard" actions={<><span className="badge ok">MVP · Tenant scoped</span><form action="/api/auth/logout" method="post"><button className="btn">Logout</button></form></>}/><div className="grid"><Kpi label="Active contracted rate cards" value="24" detail="4 expire within 90 days"/><Kpi label="Lanes with demand" value="186" detail="9 coverage exceptions"/><Kpi label="Published allocation key" value="AK-CZ-FTL-007" detail="Effective 01 Aug 2026"/><Kpi label="Modelled annual spend" value="€8.42m" detail="Base + fuel; accessorials selected"/></div><div className="two section"><div className="card"><h2 style={{marginTop:0}}>Coverage attention</h2><div className="tableWrap"><table className="table"><thead><tr><th>Issue</th><th>Lanes</th><th>Volume at risk</th><th>Severity</th></tr></thead><tbody><tr><td>No Primary allocation</td><td>3</td><td>1,240 shipments</td><td><span className="badge danger">High</span></td></tr><tr><td>No Backup 1</td><td>8</td><td>4,720 shipments</td><td><span className="badge warn">Medium</span></td></tr><tr><td>Rate expiry ≤ 60 days</td><td>5</td><td>€430k spend</td><td><span className="badge warn">Medium</span></td></tr><tr><td>Unmapped volume records</td><td>2</td><td>118 shipments</td><td><span className="badge">Review</span></td></tr></tbody></table></div></div><div className="card"><h2 style={{marginTop:0}}>Spend by mode</h2><div className="bars"><div><b>FTL</b><div className="bar"><span style={{width:'68%'}}/></div><small className="muted">€5.73m</small></div><div><b>PALLET</b><div className="bar"><span style={{width:'24%'}}/></div><small className="muted">€2.02m</small></div><div><b>LTL-PALLET</b><div className="bar"><span style={{width:'8%'}}/></div><small className="muted">€0.67m</small></div></div></div></div></AppShell>}
+import { AppShell } from '@/components/AppShell';
+import { AuthGate } from '@/components/AuthGate';
+import { PageHeader, Kpi } from '@/components/Page';
+import { prisma } from '@/lib/prisma';
+import { coverageGaps } from '@/lib/coverage';
+import { aggregatedCostProfile } from '@/lib/cost-engine';
+
+export default async function Dashboard(){
+  const session=await AuthGate(); const now=new Date(); const soon=new Date(now);soon.setUTCDate(soon.getUTCDate()+90);
+  const [activeRates,lanesWithVolume,activeKey,coverage,cost,unmapped]=await Promise.all([
+    prisma.rateCard.count({where:{tenantId:session.tenantId,commercialStatus:'CONTRACTED_ACTIVE',validFrom:{lte:now},validTo:{gte:now},status:{not:'SUPERSEDED'}}}),
+    prisma.volumeRecord.findMany({where:{tenantId:session.tenantId,laneId:{not:null}},distinct:['laneId'],select:{laneId:true}}),
+    prisma.allocationKey.findFirst({where:{tenantId:session.tenantId,status:'ACTIVE'},orderBy:{version:'desc'}}),
+    coverageGaps({tenantId:session.tenantId,asOf:now,expiryDays:90}),
+    aggregatedCostProfile({tenantId:session.tenantId,asOf:now}),
+    prisma.volumeRecord.count({where:{tenantId:session.tenantId,laneId:null}})
+  ]);
+  const expiring=await prisma.rateCard.count({where:{tenantId:session.tenantId,commercialStatus:'CONTRACTED_ACTIVE',validTo:{gte:now,lte:soon}}});
+  return <AppShell><PageHeader eyebrow="Network control" title="Dashboard" actions={<form action="/api/auth/logout" method="post"><button className="btn">Logout</button></form>}/>
+    <div className="grid"><Kpi label="Active contracted rate cards" value={String(activeRates)} detail={expiring+' expire within 90 days'}/><Kpi label="Lanes with demand" value={String(lanesWithVolume.length)} detail={coverage.length+' coverage exceptions'}/><Kpi label="Latest active allocation key" value={activeKey?.displayKey??'None'} detail={activeKey?.effectiveFrom?'Effective '+activeKey.effectiveFrom.toISOString().slice(0,10):'No published key'}/><Kpi label="Modelled cost" value={'€'+cost.total.toLocaleString(undefined,{maximumFractionDigits:0})} detail={unmapped+' unmapped volume record(s)'}/></div>
+    <div className="section card"><h2>Highest-priority coverage gaps</h2>{coverage.length?<div className="tableWrap"><table className="table"><thead><tr><th>Severity</th><th>Issue</th><th>Lane</th><th>Carrier</th><th>Volume</th><th>Details</th></tr></thead><tbody>{coverage.slice(0,12).map((r,i)=><tr key={i}><td><span className={r.severity==='HIGH'?'badge danger':r.severity==='MEDIUM'?'badge warn':'badge'}>{r.severity}</span></td><td>{r.issue}</td><td>{r.lane??'—'}</td><td>{r.carrier??'—'}</td><td>{r.volume.toLocaleString()}</td><td>{r.details}</td></tr>)}</tbody></table></div>:<p className="muted">No coverage gaps found for current data.</p>}</div>
+  </AppShell>;
+}
