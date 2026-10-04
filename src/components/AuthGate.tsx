@@ -1,0 +1,1 @@
+import { getSession } from '@/lib/auth'; import { redirect } from 'next/navigation'; export async function AuthGate(){const s=await getSession(); if(!s&&process.env.NODE_ENV==='production')redirect('/login'); return s}

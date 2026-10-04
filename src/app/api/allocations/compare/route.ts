@@ -1,0 +1,2 @@
+import {getSession} from '@/lib/auth'; import {compareAllocationKeys} from '@/lib/allocation';
+export async function GET(req:Request){const s=await getSession(); if(!s)return Response.json({error:'Unauthorized'},{status:401}); const u=new URL(req.url); const a=u.searchParams.get('a'),b=u.searchParams.get('b'); if(!a||!b)return Response.json({error:'a and b required'},{status:400}); return Response.json(await compareAllocationKeys(s.tenantId,a,b))}

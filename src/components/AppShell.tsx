@@ -1,0 +1,3 @@
+import Link from 'next/link';
+const links=[['/dashboard','Dashboard'],['/imports','Imports'],['/carriers','Carriers'],['/rate-cards','Rate Cards'],['/lanes','Lanes / Search'],['/allocations','Allocations'],['/volumes','Volumes'],['/postcode-mapping','Postcode Mapping'],['/scenarios','Scenarios'],['/commercials','Fuel & Accessorials'],['/reports','Reports / Exports']];
+export function AppShell({children}:{children:React.ReactNode}){return <div className="shell"><aside className="sidebar"><div className="brand"><small>PANTHERAS GLOBAL</small>Carrier Rate & Allocation</div><nav className="nav">{links.map(([href,label])=><Link key={href} href={href}>{label}</Link>)}</nav></aside><main className="main">{children}</main></div>}

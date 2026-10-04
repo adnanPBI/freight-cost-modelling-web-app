@@ -1,0 +1,2 @@
+import { NextResponse } from 'next/server'; import { authenticate,createSession } from '@/lib/auth';
+export async function POST(req:Request){const f=await req.formData(); const u=await authenticate(String(f.get('email')||''),String(f.get('password')||'')); if(!u)return NextResponse.redirect(new URL('/login?error=1',req.url),303); await createSession(u); return NextResponse.redirect(new URL('/dashboard',req.url),303)}

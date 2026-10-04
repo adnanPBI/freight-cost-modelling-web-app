@@ -1,0 +1,11 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: carrier_platform
+      POSTGRES_USER: carrier
+      POSTGRES_PASSWORD: carrier
+    ports: ["5432:5432"]
+    volumes: ["carrier_pg:/var/lib/postgresql/data"]
+volumes:
+  carrier_pg:

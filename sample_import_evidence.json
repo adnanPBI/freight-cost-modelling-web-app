@@ -1,0 +1,15 @@
+{
+  "rate_workbook": {
+    "FTL": {"rows": 7,"columns": 22},
+    "LTL-PALLET and PALLET": {"rows": 8,"columns": 58}
+  },
+  "allocation_rows": [
+    {"dc":"CZDC","mode":"FTL","dest_country":"DE","dest_region":"01","destination_zip":"00000000","customer_flag":"DEFAULT001","allocation_order":"1","carrier":"CARRIER1NAME"},
+    {"dc":"CZDC","mode":"FTL","dest_country":"DE","dest_region":"01","destination_zip":"00000000","customer_flag":"DEFAULT001","allocation_order":"2","carrier":"CARRIER2NAME"},
+    {"dc":"CZDC","mode":"FTL","dest_country":"DE","dest_region":"01","destination_zip":"00000000","customer_flag":"DEFAULT001","allocation_order":"3","carrier":"CARRIER3NAME"},
+    {"dc":"CZDC","mode":"FTL","dest_country":"DE","dest_region":"01","destination_zip":"00000000","customer_flag":"DEFAULT001","allocation_order":"4","carrier":"CARRIER4NAME"},
+    {"dc":"CZDC","mode":"FTL","dest_country":"DE","dest_region":"01","destination_zip":"00000000","customer_flag":"DEFAULT001","allocation_order":"5","carrier":"CARRIER5NAME"},
+    {"dc":"CZDC","mode":"FTL","dest_country":"DE","dest_region":"01","destination_zip":"00000000","customer_flag":"CUSTOMER123","allocation_order":"1","carrier":"CARRIER6NAME"},
+    {"dc":"CZDC","mode":"FTL","dest_country":"DE","dest_region":"01","destination_zip":"01093000","customer_flag":"DEFAULT001","allocation_order":"1","carrier":"CARRIER7NAME"}
+  ]
+}

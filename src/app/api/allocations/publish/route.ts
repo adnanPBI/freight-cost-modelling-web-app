@@ -1,0 +1,2 @@
+import {getSession} from '@/lib/auth'; import {publishAllocationKey} from '@/lib/allocation';
+export async function POST(req:Request){const s=await getSession(); if(!s)return Response.json({error:'Unauthorized'},{status:401}); const {keyId}=await req.json(); try{return Response.json(await publishAllocationKey(s.tenantId,keyId,s.id))}catch(e){return Response.json({error:e instanceof Error?e.message:'Publish failed'},{status:400})}}
