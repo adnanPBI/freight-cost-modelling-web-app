@@ -12,6 +12,10 @@ enum UserRole {
   USER
 }
 
+enum Currency {
+  EUR
+}
+
 enum CommercialStatus {
   CONTRACTED_ACTIVE
   CONTRACTED_EXPIRED
@@ -57,9 +61,29 @@ enum ImportType {
 
 enum ImportStatus {
   PENDING
+  VALIDATED
   COMPLETED
   COMPLETED_WITH_ERRORS
   FAILED
+}
+
+enum AccessorialBasis {
+  PER_SHIPMENT
+  PER_PALLET
+  PER_HOUR
+  FLAT
+  PERCENT_BASE
+}
+
+enum PalletRounding {
+  UP
+  NEAREST
+}
+
+enum Above36Policy {
+  FTL
+  SPLIT
+  ERROR
 }
 
 model Tenant {
@@ -67,20 +91,41 @@ model Tenant {
   name             String
   createdAt        DateTime             @default(now())
   users            User[]
+  config           TenantConfig?
+  revisions        EntityRevision[]
   carriers         Carrier[]
+  carrierAliases   CarrierAlias[]
   dcs              DistributionCentre[]
   modes            TransportMode[]
   lanes            Lane[]
   rateCards        RateCard[]
+  laneRates        LaneRate[]
+  palletBands      PalletBand[]
   allocationKeys   AllocationKey[]
+  allocationRules  AllocationRule[]
   volumes          VolumeRecord[]
   postcodeMappings PostcodeMapping[]
   accessorialTypes AccessorialType[]
   accessorials     CarrierAccessorial[]
   fuelSurcharges   FuelSurcharge[]
   scenarios        Scenario[]
+  scenarioRules    ScenarioRule[]
   imports          ImportJob[]
   audits           AuditEvent[]
+}
+
+model TenantConfig {
+  id                        String          @id @default(cuid())
+  tenantId                  String          @unique
+  tenant                    Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  palletRounding            PalletRounding  @default(UP)
+  above36Policy             Above36Policy   @default(FTL)
+  maxPalletsPerFtl          Int             @default(33)
+  minContractedCarriers     Int             @default(2)
+  defaultExpiryHorizonDays  Int             @default(90)
+  requireFuelForCosting     Boolean         @default(false)
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @updatedAt
 }
 
 model User {
@@ -96,123 +141,164 @@ model User {
   updatedAt    DateTime @updatedAt
 
   @@unique([tenantId, email])
+  @@index([email])
+}
+
+model EntityRevision {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  entityType  String
+  entityId    String
+  version     Int
+  changeType  String
+  snapshot    Json
+  changedById String?
+  changedAt   DateTime @default(now())
+
+  @@unique([tenantId, entityType, entityId, version])
+  @@index([tenantId, entityType, entityId])
 }
 
 model Carrier {
-  id            String               @id @default(cuid())
-  tenantId      String
-  tenant        Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  name          String
-  code          String
-  active        Boolean              @default(true)
-  notes         String?
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-  aliases       CarrierAlias[]
-  rateCards     RateCard[]
-  allocations   AllocationRule[]
-  accessorials  CarrierAccessorial[]
-  fuel          FuelSurcharge[]
-  scenarioRules ScenarioRule[]
+  id                       String               @id @default(cuid())
+  tenantId                 String
+  tenant                   Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name                     String
+  code                     String
+  active                   Boolean              @default(true)
+  notes                    String?
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  aliases                  CarrierAlias[]
+  rateCards                RateCard[]
+  allocations              AllocationRule[]
+  accessorials             CarrierAccessorial[]
+  fuel                     FuelSurcharge[]
+  scenarioRules            ScenarioRule[]       @relation("ScenarioCarrier")
+  replacementScenarioRules ScenarioRule[]       @relation("ReplacementCarrier")
 
   @@unique([tenantId, code])
   @@index([tenantId, name])
 }
 
 model CarrierAlias {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   carrierId String
-  carrier   Carrier @relation(fields: [carrierId], references: [id], onDelete: Cascade)
+  carrier   Carrier  @relation(fields: [carrierId], references: [id], onDelete: Cascade)
   alias     String
+  createdAt DateTime @default(now())
 
-  @@unique([carrierId, alias])
+  @@unique([tenantId, alias])
+  @@index([tenantId, carrierId])
 }
 
 model DistributionCentre {
-  id          String         @id @default(cuid())
-  tenantId    String
-  tenant      Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  code        String
-  name        String
-  countryCode String
-  active      Boolean        @default(true)
-  lanes       Lane[]
-  rateCards   RateCard[]
-  volumes     VolumeRecord[]
+  id             String               @id @default(cuid())
+  tenantId       String
+  tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code           String
+  name           String
+  countryCode    String
+  aliases        String[]             @default([])
+  active         Boolean              @default(true)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  lanes          Lane[]
+  rateCards      RateCard[]
+  volumes        VolumeRecord[]
+  accessorials   CarrierAccessorial[]
+  fuelSurcharges FuelSurcharge[]
 
   @@unique([tenantId, code])
 }
 
 model TransportMode {
-  id         String         @id @default(cuid())
-  tenantId   String
-  tenant     Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  code       String
-  name       String
-  palletBand Boolean        @default(false)
-  active     Boolean        @default(true)
-  lanes      Lane[]
-  rateCards  RateCard[]
-  volumes    VolumeRecord[]
+  id             String               @id @default(cuid())
+  tenantId       String
+  tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code           String
+  name           String
+  palletBand     Boolean              @default(false)
+  active         Boolean              @default(true)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  lanes          Lane[]
+  rateCards      RateCard[]
+  volumes        VolumeRecord[]
+  accessorials   CarrierAccessorial[]
+  fuelSurcharges FuelSurcharge[]
 
   @@unique([tenantId, code])
 }
 
 model Lane {
-  id                 String             @id @default(cuid())
+  id                 String               @id @default(cuid())
   tenantId           String
-  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant             Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   dcId               String
-  dc                 DistributionCentre @relation(fields: [dcId], references: [id])
+  dc                 DistributionCentre   @relation(fields: [dcId], references: [id])
   modeId             String
-  mode               TransportMode      @relation(fields: [modeId], references: [id])
+  mode               TransportMode        @relation(fields: [modeId], references: [id])
   originCountry      String
   destinationCountry String
   destinationRegion  String
   laneIdentifier     String?
-  active             Boolean            @default(true)
+  active             Boolean              @default(true)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
   rates              LaneRate[]
   allocations        AllocationRule[]
   volumes            VolumeRecord[]
   mappings           PostcodeMapping[]
   scenarioRules      ScenarioRule[]
+  accessorials       CarrierAccessorial[]
+  fuelSurcharges     FuelSurcharge[]
 
   @@unique([tenantId, dcId, modeId, destinationCountry, destinationRegion])
   @@index([tenantId, destinationCountry, destinationRegion])
 }
 
 model RateCard {
-  id               String           @id @default(cuid())
+  id               String                @id @default(cuid())
   tenantId         String
-  tenant           Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   carrierId        String
-  carrier          Carrier          @relation(fields: [carrierId], references: [id])
+  carrier          Carrier               @relation(fields: [carrierId], references: [id])
   dcId             String
-  dc               DistributionCentre @relation(fields: [dcId], references: [id])
+  dc               DistributionCentre    @relation(fields: [dcId], references: [id])
   modeId           String
-  mode             TransportMode    @relation(fields: [modeId], references: [id])
-  currency         String           @default("EUR")
+  mode             TransportMode         @relation(fields: [modeId], references: [id])
+  currency         Currency              @default(EUR)
   validFrom        DateTime
   validTo          DateTime
   commercialStatus CommercialStatus
   status           RateCardStatus
   originalFilename String
-  version          Int              @default(1)
+  uploadChecksum   String?
+  version          Int                   @default(1)
   supersedesId     String?
+  supersedes       RateCard?             @relation("RateCardVersions", fields: [supersedesId], references: [id])
+  newerVersions    RateCard[]            @relation("RateCardVersions")
   notes            String?
   metadata         Json?
   createdById      String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
   rates            LaneRate[]
   accessorials     CarrierAccessorial[]
   fuel             FuelSurcharge[]
 
   @@index([tenantId, carrierId, dcId, modeId, validFrom, validTo])
+  @@index([tenantId, uploadChecksum])
 }
 
 model LaneRate {
   id              String       @id @default(cuid())
+  tenantId        String
+  tenant          Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   rateCardId      String
   rateCard        RateCard     @relation(fields: [rateCardId], references: [id], onDelete: Cascade)
   laneId          String
@@ -223,43 +309,55 @@ model LaneRate {
   capacity        Decimal?     @db.Decimal(12, 2)
   committedTrucks Decimal?     @db.Decimal(12, 2)
   sourceRow       Int?
+  sourceMetadata  Json?
   bands           PalletBand[]
 
-  @@unique([rateCardId, laneId])
+  @@unique([tenantId, rateCardId, laneId])
 }
 
 model PalletBand {
   id         String   @id @default(cuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   laneRateId String
   laneRate   LaneRate @relation(fields: [laneRateId], references: [id], onDelete: Cascade)
   palletQty  Int
   rate       Decimal  @db.Decimal(12, 2)
 
-  @@unique([laneRateId, palletQty])
+  @@unique([tenantId, laneRateId, palletQty])
 }
 
 model AllocationKey {
-  id               String              @id @default(cuid())
-  tenantId         String
-  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  displayKey       String
-  dcId             String?
-  modeId           String?
-  status           AllocationKeyStatus @default(DRAFT)
-  effectiveFrom    DateTime?
-  effectiveTo      DateTime?
-  changeNote       String?
-  source           String              @default("manual")
-  sourceScenarioId String?
-  createdById      String?
-  createdAt        DateTime            @default(now())
-  rules            AllocationRule[]
+  id                   String              @id @default(cuid())
+  tenantId             String
+  tenant               Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  displayKey           String
+  version              Int                 @default(1)
+  dcId                 String?
+  modeId               String?
+  status               AllocationKeyStatus @default(DRAFT)
+  effectiveFrom        DateTime?
+  effectiveTo          DateTime?
+  changeNote           String?
+  source               String              @default("manual")
+  sourceScenarioId     String?
+  supersedesId         String?
+  supersedes           AllocationKey?      @relation("AllocationKeyVersions", fields: [supersedesId], references: [id])
+  newerVersions        AllocationKey[]      @relation("AllocationKeyVersions")
+  createdById          String?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  rules                AllocationRule[]
+  promotedFromScenario Scenario?           @relation("ScenarioPromotion")
 
-  @@index([tenantId, status])
+  @@unique([tenantId, displayKey])
+  @@index([tenantId, status, dcId, modeId])
 }
 
 model AllocationRule {
   id              String             @id @default(cuid())
+  tenantId        String
+  tenant          Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   allocationKeyId String
   allocationKey   AllocationKey      @relation(fields: [allocationKeyId], references: [id], onDelete: Cascade)
   carrierId       String
@@ -272,50 +370,86 @@ model AllocationRule {
   percentage      Decimal?           @db.Decimal(7, 4)
   notes           String?
 
-  @@index([allocationKeyId, laneId, customerCode])
+  @@index([tenantId, allocationKeyId, laneId, customerCode])
+}
+
+model ImportJob {
+  id           String       @id @default(cuid())
+  tenantId     String
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  type         ImportType
+  filename     String
+  checksum     String
+  status       ImportStatus @default(PENDING)
+  successRows  Int          @default(0)
+  errorRows    Int          @default(0)
+  warningRows  Int          @default(0)
+  issues       Json?
+  parsedData   Json?
+  overrides    Json?
+  createdById  String?
+  createdAt    DateTime     @default(now())
+  committedAt  DateTime?
+  volumes      VolumeRecord[]
+
+  @@index([tenantId, type, checksum])
 }
 
 model VolumeRecord {
-  id                  String             @id @default(cuid())
-  tenantId            String
-  tenant              Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  dcId                String
-  dc                  DistributionCentre @relation(fields: [dcId], references: [id])
-  modeId              String
-  mode                TransportMode      @relation(fields: [modeId], references: [id])
-  laneId              String?
-  lane                Lane?              @relation(fields: [laneId], references: [id])
-  customerCode        String
-  customerName        String
-  destinationCountry  String
-  destinationPostcode String
-  normalizedPostcode  String
-  destinationRegion   String?
-  shipmentCount       Decimal            @db.Decimal(14, 2)
-  palletCount         Decimal?           @db.Decimal(14, 2)
-  averagePallets      Decimal?           @db.Decimal(12, 4)
-  period              String
-  forecastVolume      Decimal?           @db.Decimal(14, 2)
-  notes               String?
-  createdAt           DateTime           @default(now())
+  id                       String             @id @default(cuid())
+  tenantId                 String
+  tenant                   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  importJobId              String?
+  importJob                ImportJob?         @relation(fields: [importJobId], references: [id])
+  dcId                     String
+  dc                       DistributionCentre @relation(fields: [dcId], references: [id])
+  modeId                   String
+  mode                     TransportMode      @relation(fields: [modeId], references: [id])
+  laneId                   String?
+  lane                     Lane?              @relation(fields: [laneId], references: [id])
+  customerCode             String
+  customerName             String
+  destinationCountry       String
+  destinationPostcode      String
+  normalizedPostcode       String
+  destinationRegion        String?
+  shipmentCount            Decimal            @db.Decimal(14, 2)
+  palletCount              Decimal?           @db.Decimal(14, 2)
+  averagePallets           Decimal?           @db.Decimal(12, 4)
+  shipmentPalletQuantities Json?
+  accessorialAssumptions   Json?
+  period                   String
+  forecastVolume           Decimal?           @db.Decimal(14, 2)
+  notes                    String?
+  mappedAt                 DateTime?
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
 
   @@index([tenantId, dcId, modeId, laneId])
+  @@index([tenantId, customerCode])
 }
 
 model PostcodeMapping {
-  id                String   @id @default(cuid())
+  id                String             @id @default(cuid())
   tenantId          String
-  tenant            Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant            Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   countryCode       String
   prefix            String
   destinationRegion String
   laneId            String?
-  lane              Lane?    @relation(fields: [laneId], references: [id])
+  lane              Lane?              @relation(fields: [laneId], references: [id])
   validFrom         DateTime?
+  validTo           DateTime?
+  version           Int                @default(1)
+  supersedesId      String?
+  supersedes        PostcodeMapping?   @relation("PostcodeMappingVersions", fields: [supersedesId], references: [id])
+  newerVersions     PostcodeMapping[]  @relation("PostcodeMappingVersions")
   notes             String?
-  createdAt         DateTime @default(now())
+  createdById       String?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
-  @@unique([tenantId, countryCode, prefix])
+  @@index([tenantId, countryCode, prefix, validFrom, validTo])
 }
 
 model AccessorialType {
@@ -325,102 +459,115 @@ model AccessorialType {
   code         String
   name         String
   description  String?
-  defaultBasis String
+  defaultBasis AccessorialBasis
   active       Boolean              @default(true)
   notes        String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
   agreements   CarrierAccessorial[]
 
   @@unique([tenantId, code])
 }
 
 model CarrierAccessorial {
-  id                 String           @id @default(cuid())
+  id                 String                @id @default(cuid())
   tenantId           String
-  tenant             Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant             Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   carrierId          String
-  carrier            Carrier          @relation(fields: [carrierId], references: [id])
+  carrier            Carrier               @relation(fields: [carrierId], references: [id])
   typeId             String
-  type               AccessorialType  @relation(fields: [typeId], references: [id])
-  amount             Decimal          @db.Decimal(12, 2)
-  currency           String           @default("EUR")
-  chargingBasis      String
+  type               AccessorialType       @relation(fields: [typeId], references: [id])
+  amount             Decimal               @db.Decimal(12, 4)
+  currency           Currency              @default(EUR)
+  chargingBasis      AccessorialBasis
   validFrom          DateTime
   validTo            DateTime
   commercialStatus   CommercialStatus
   dcId               String?
+  dc                 DistributionCentre?   @relation(fields: [dcId], references: [id])
   modeId             String?
+  mode               TransportMode?        @relation(fields: [modeId], references: [id])
   destinationCountry String?
   laneId             String?
+  lane               Lane?                 @relation(fields: [laneId], references: [id])
   rateCardId         String?
-  rateCard           RateCard?        @relation(fields: [rateCardId], references: [id])
+  rateCard           RateCard?             @relation(fields: [rateCardId], references: [id])
+  version            Int                   @default(1)
+  supersedesId       String?
+  supersedes         CarrierAccessorial?   @relation("AccessorialVersions", fields: [supersedesId], references: [id])
+  newerVersions      CarrierAccessorial[]  @relation("AccessorialVersions")
   notes              String?
+  createdById        String?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
 
   @@index([tenantId, carrierId, typeId, validFrom, validTo])
 }
 
 model FuelSurcharge {
-  id         String    @id @default(cuid())
-  tenantId   String
-  tenant     Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  carrierId  String
-  carrier    Carrier   @relation(fields: [carrierId], references: [id])
-  dcId       String?
-  modeId     String?
-  rateCardId String?
-  rateCard   RateCard? @relation(fields: [rateCardId], references: [id])
-  percentage Decimal   @db.Decimal(8, 4)
-  validFrom  DateTime
-  validTo    DateTime
-  notes      String?
+  id           String              @id @default(cuid())
+  tenantId     String
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  carrierId    String
+  carrier      Carrier             @relation(fields: [carrierId], references: [id])
+  dcId         String?
+  dc           DistributionCentre? @relation(fields: [dcId], references: [id])
+  modeId       String?
+  mode         TransportMode?      @relation(fields: [modeId], references: [id])
+  laneId       String?
+  lane         Lane?               @relation(fields: [laneId], references: [id])
+  rateCardId   String?
+  rateCard     RateCard?           @relation(fields: [rateCardId], references: [id])
+  percentage   Decimal             @db.Decimal(8, 4)
+  validFrom    DateTime
+  validTo      DateTime
+  version      Int                 @default(1)
+  supersedesId String?
+  supersedes   FuelSurcharge?      @relation("FuelVersions", fields: [supersedesId], references: [id])
+  newerVersions FuelSurcharge[]    @relation("FuelVersions")
+  notes        String?
+  createdById  String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
 
   @@index([tenantId, carrierId, validFrom, validTo])
 }
 
 model Scenario {
-  id                      String         @id @default(cuid())
+  id                      String          @id @default(cuid())
   tenantId                String
-  tenant                  Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant                  Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   name                    String
   description             String?
   modellingDate           DateTime
-  enablePalletToFtl       Boolean        @default(false)
-  maxPalletsPerFtl        Int            @default(33)
+  enablePalletToFtl       Boolean         @default(false)
+  maxPalletsPerFtl        Int             @default(33)
+  promotedAllocationKeyId String?         @unique
+  promotedAllocationKey   AllocationKey?  @relation("ScenarioPromotion", fields: [promotedAllocationKeyId], references: [id])
   createdById             String?
-  createdAt               DateTime       @default(now())
-  promotedAllocationKeyId String?
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
   rules                   ScenarioRule[]
 }
 
 model ScenarioRule {
   id                   String           @id @default(cuid())
+  tenantId             String
+  tenant               Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   scenarioId           String
   scenario             Scenario         @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
   type                 ScenarioRuleType
   laneId               String
   lane                 Lane             @relation(fields: [laneId], references: [id])
   carrierId            String?
-  carrier              Carrier?         @relation(fields: [carrierId], references: [id])
+  carrier              Carrier?         @relation("ScenarioCarrier", fields: [carrierId], references: [id])
   replacementCarrierId String?
+  replacementCarrier   Carrier?         @relation("ReplacementCarrier", fields: [replacementCarrierId], references: [id])
   customerCode         String?
   percentage           Decimal?         @db.Decimal(7, 4)
   notes                String?
-}
 
-model ImportJob {
-  id          String       @id @default(cuid())
-  tenantId    String
-  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  type        ImportType
-  filename    String
-  checksum    String?
-  status      ImportStatus @default(PENDING)
-  successRows Int          @default(0)
-  errorRows   Int          @default(0)
-  warnings    Json?
-  errors      Json?
-  metadata    Json?
-  createdById String?
-  createdAt   DateTime     @default(now())
+  @@index([tenantId, scenarioId, laneId, customerCode])
 }
 
 model AuditEvent {
