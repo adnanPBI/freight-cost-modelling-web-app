@@ -1,2 +1,17 @@
-import {getSession} from '@/lib/auth'; import {publishAllocationKey} from '@/lib/allocation';
-export async function POST(req:Request){const s=await getSession(); if(!s)return Response.json({error:'Unauthorized'},{status:401}); const {keyId}=await req.json(); try{return Response.json(await publishAllocationKey(s.tenantId,keyId,s.id))}catch(e){return Response.json({error:e instanceof Error?e.message:'Publish failed'},{status:400})}}
+import { NextResponse } from 'next/server';
+import { publishAllocationKey } from '@/lib/allocation';
+import { apiError, requireApiSession, wantsJson } from '@/lib/http';
+
+export async function POST(req:Request){
+  try{
+    const session=await requireApiSession(req,true);
+    const contentType=req.headers.get('content-type')||'';
+    let keyId='';
+    if(contentType.includes('application/json')) keyId=String((await req.json()).keyId||'');
+    else keyId=String((await req.formData()).get('keyId')||'');
+    if(!keyId) throw new Error('Allocation key ID is required.');
+    const result=await publishAllocationKey(session.tenantId,keyId,session.id);
+    if(wantsJson(req)) return NextResponse.json(result);
+    return NextResponse.redirect(new URL('/allocations?key='+result.id,req.url),303);
+  }catch(error){return apiError(error);}
+}
