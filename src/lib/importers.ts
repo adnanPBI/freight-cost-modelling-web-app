@@ -1,4 +1,4 @@
-import ExcelJS from '@andreeewill/exceljs';
+import ExcelJS from '@ayocore/exceljs';
 
 export type ImportIssue={sheet:string;row?:number;field?:string;message:string;severity:'error'|'warning'};
 export type RateMode='FTL'|'PALLET'|'LTL-PALLET';
