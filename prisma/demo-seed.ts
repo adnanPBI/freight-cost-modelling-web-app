@@ -453,5 +453,5 @@ export async function seedDemoData(prisma:PrismaClient,tenantId:string,userId?:s
     }});
   },{maxWait:15000,timeout:300000});
 
-  console.log('Synthetic demo dataset loaded:',DEMO_SEED_VERSION,'| 12 carriers | 72 lanes | 60 rate cards | 98 volume records | 4 scenarios');
+  console.log('Synthetic demo dataset loaded:',DEMO_SEED_VERSION,`| ${carrierDefs.length} carriers | ${laneByKey.size} lanes | ${rateCardCount} rate cards | ${volumeData.length} volume records | 4 scenarios`);
 }

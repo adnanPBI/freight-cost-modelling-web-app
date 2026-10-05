@@ -15,7 +15,7 @@ The dataset is deliberately fictional and is intended only for demos, screenshot
 - 12 fictional carriers with aliases
 - 72 lanes across CZ, FR and PL DCs
 - FTL, PALLET and LTL-PALLET modes
-- 60 current/historical/research rate cards
+- 59 current/historical/research rate cards
 - hundreds of lane-rate rows
 - full 1–36 pallet-band tariffs
 - current and historical fuel tables
