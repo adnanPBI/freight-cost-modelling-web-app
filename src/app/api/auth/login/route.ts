@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { authenticate, createSession } from '@/lib/auth';
+import { publicUrl } from '@/lib/public-url';
 
 export async function POST(req:Request){
   try{
