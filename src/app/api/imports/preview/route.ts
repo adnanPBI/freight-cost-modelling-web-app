@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { ImportType } from '@prisma/client';
 import { previewImport } from '@/lib/imports';
 import { apiError, requireApiSession, wantsJson } from '@/lib/http';
+import { publicUrl } from '@/lib/public-url';
 
 const MAX_UPLOAD=10*1024*1024;
 const typeMap:Record<string,ImportType>={rate:'RATE_CARD',allocation:'ALLOCATION_KEY',volume:'VOLUME',postcode:'POSTCODE_MAPPING'};
