@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { commitImport } from '@/lib/imports';
 import { apiError, requireApiSession, wantsJson } from '@/lib/http';
-import { publicUrl } from '@/lib/public-url';
+import { redirect303 } from '@/lib/public-url';
 
 export async function POST(req:Request){
   try{
