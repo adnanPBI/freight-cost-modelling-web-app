@@ -26,6 +26,6 @@ export async function POST(req:Request){
         defaultExpiryHorizonDays:Number(f.get('defaultExpiryHorizonDays')||90),requireFuelForCosting:String(f.get('requireFuelForCosting')||'')==='on'
       }});
     }
-    if(wantsJson(req))return NextResponse.json(result);return NextResponse.redirect(new URL('/settings',req.url),303);
+    if(wantsJson(req))return NextResponse.json(result);return redirect303('/settings');
   }catch(e){return apiError(e);}
 }

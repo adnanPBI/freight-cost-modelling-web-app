@@ -14,6 +14,6 @@ export async function POST(req:Request){
     for(const key of keys){const v=form.get(key);if(v!==null&&String(v)!=='')overrides[key]=String(v);}
     const result=await commitImport({tenantId:session.tenantId,userId:session.id,jobId,overrides});
     if(wantsJson(req)) return NextResponse.json(result);
-    return NextResponse.redirect(new URL('/imports?job='+jobId+'&committed=1',req.url),303);
+    return redirect303('/imports?job='+jobId+'&committed=1');
   }catch(error){return apiError(error);}
 }

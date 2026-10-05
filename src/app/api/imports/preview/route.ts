@@ -24,6 +24,6 @@ export async function POST(req:Request){
     const buffer=Buffer.from(await file.arrayBuffer());
     const job=await previewImport({tenantId:session.tenantId,userId:session.id,type,filename:file.name,buffer,modeOverride});
     if(wantsJson(req)) return NextResponse.json({jobId:job.id,issues:job.issues,preview:job.parsed,duplicateOf:job.duplicateOf});
-    return NextResponse.redirect(new URL('/imports?job='+job.id,req.url),303);
+    return redirect303('/imports?job='+job.id);
   }catch(error){return apiError(error);}
 }

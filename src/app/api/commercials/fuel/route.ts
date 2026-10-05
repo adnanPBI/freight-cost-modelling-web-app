@@ -12,6 +12,6 @@ export async function POST(req:Request){
     const scope={dcId:String(f.get('dcId')||'')||null,modeId:String(f.get('modeId')||'')||null,laneId:String(f.get('laneId')||'')||null,rateCardId:String(f.get('rateCardId')||'')||null};
     const latest=await prisma.fuelSurcharge.findFirst({where:{tenantId:session.tenantId,carrierId,...scope},orderBy:{version:'desc'}});
     const row=await prisma.fuelSurcharge.create({data:{tenantId:session.tenantId,carrierId,percentage,validFrom,validTo,...scope,version:(latest?.version??0)+1,supersedesId:latest?.id,notes:String(f.get('notes')||'')||undefined,createdById:session.id}});
-    if(wantsJson(req))return NextResponse.json(row);return NextResponse.redirect(new URL('/commercials',req.url),303);
+    if(wantsJson(req))return NextResponse.json(row);return redirect303('/commercials');
   }catch(e){return apiError(e);}
 }

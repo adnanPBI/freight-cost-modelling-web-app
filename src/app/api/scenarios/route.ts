@@ -13,6 +13,6 @@ export async function POST(req:Request){
     else if(action==='rule')result=await addScenarioRule({tenantId:s.tenantId,scenarioId:String(f.get('scenarioId')||''),type:String(f.get('type')||'CARRIER_REPLACEMENT') as any,laneId:String(f.get('laneId')||''),carrierId:String(f.get('carrierId')||'')||undefined,replacementCarrierId:String(f.get('replacementCarrierId')||'')||undefined,customerCode:String(f.get('customerCode')||'')||undefined,percentage:f.get('percentage')?Number(f.get('percentage')):undefined,notes:String(f.get('notes')||'')||undefined});
     else if(action==='promote')result=await promoteScenario({tenantId:s.tenantId,userId:s.id,scenarioId:String(f.get('scenarioId')||''),merge:String(f.get('merge')||'')==='true'});
     else throw new Error('Unknown scenario action');
-    if(wantsJson(req))return NextResponse.json(result);return NextResponse.redirect(new URL('/scenarios'+(result?.id?'?id='+result.id:''),req.url),303);
+    if(wantsJson(req))return NextResponse.json(result);return redirect303('/scenarios'+(result?.id?'?id='+result.id:''));
   }catch(e){return apiError(e);}
 }
