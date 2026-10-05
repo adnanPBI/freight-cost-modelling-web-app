@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiError, requireApiSession, wantsJson } from '@/lib/http';
 import { addScenarioRule, createScenario, promoteScenario, runScenario } from '@/lib/scenario';
+import { publicUrl } from '@/lib/public-url';
 
 export async function GET(req:Request){
   try{const s=await requireApiSession(req);const id=new URL(req.url).searchParams.get('id');if(!id)throw new Error('id required');return NextResponse.json(await runScenario({tenantId:s.tenantId,scenarioId:id}));}catch(e){return apiError(e);}
