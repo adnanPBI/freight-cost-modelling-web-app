@@ -11,16 +11,21 @@ function PreviewTable({rows}:{rows:any[]}){
 
 export default async function Imports({searchParams}:{searchParams:Promise<{job?:string;committed?:string}>}){
   const session=await AuthGate(); const q=await searchParams;
-  const [carriers,dcs,modes,job]=await Promise.all([
+  const [carriers,dcs,modes,job,recentJobs,completedCount,validatedCount,failedCount]=await Promise.all([
     prisma.carrier.findMany({where:{tenantId:session.tenantId,active:true},orderBy:{name:'asc'}}),
     prisma.distributionCentre.findMany({where:{tenantId:session.tenantId,active:true},orderBy:{code:'asc'}}),
     prisma.transportMode.findMany({where:{tenantId:session.tenantId,active:true},orderBy:{code:'asc'}}),
-    q.job?prisma.importJob.findFirst({where:{id:q.job,tenantId:session.tenantId}}):Promise.resolve(null)
+    q.job?prisma.importJob.findFirst({where:{id:q.job,tenantId:session.tenantId}}):Promise.resolve(null),
+    prisma.importJob.findMany({where:{tenantId:session.tenantId},orderBy:{createdAt:'desc'},take:8}),
+    prisma.importJob.count({where:{tenantId:session.tenantId,status:'COMPLETED'}}),
+    prisma.importJob.count({where:{tenantId:session.tenantId,status:'VALIDATED'}}),
+    prisma.importJob.count({where:{tenantId:session.tenantId,status:{in:['FAILED','COMPLETED_WITH_ERRORS']}}})
   ]);
   const parsed=job?.parsedData as any; const issues=((job?.issues as any[])??[]);
   const errors=issues.filter(x=>x.severity==='error').length;
   return <AppShell>
-    <PageHeader eyebrow="Excel intake" title="Imports"/>
+    <PageHeader eyebrow="Excel intake" title="Imports" description="Validate, review and commit governed Excel imports with row-level errors, checksums and immutable import history before commercial data is written."/>
+    <div className="summaryStrip"><div className="summaryCell"><div className="summaryLabel">Completed imports</div><div className="summaryValue">{completedCount}</div><div className="summaryNote">Committed into business tables</div></div><div className="summaryCell"><div className="summaryLabel">Ready to commit</div><div className="summaryValue">{validatedCount}</div><div className="summaryNote">Validated without blocking errors</div></div><div className="summaryCell"><div className="summaryLabel">Needs attention</div><div className="summaryValue">{failedCount}</div><div className="summaryNote">Failed or completed with errors</div></div><div className="summaryCell"><div className="summaryLabel">Supported workbook types</div><div className="summaryValue">4</div><div className="summaryNote">Rates · allocations · volumes · postcodes</div></div></div>
     <div className="notice">Supported: FTL and 1–36 pallet-band rate cards, allocation keys, customer volumes and postcode mappings. Header rows are detected; leading zeroes are preserved; validation is completed before any business data is written.</div>
     <div className="section card"><h2>1. Validate workbook</h2>
       <form action="/api/imports/preview" method="post" encType="multipart/form-data" className="formgrid">
@@ -30,6 +35,7 @@ export default async function Imports({searchParams}:{searchParams:Promise<{job?
         <div><button className="btn gold" type="submit">Validate & preview</button></div>
       </form>
     </div>
+    <div className="section card panelCard"><div className="panelHeader"><div><div className="sectionTitle">Recent import activity</div><div className="sectionSubtitle">Latest workbook validation and commit events for this tenant.</div></div></div><div className="tableWrap" style={{border:0,borderRadius:0,boxShadow:'none'}}><table className="table"><thead><tr><th>File</th><th>Type</th><th>Status</th><th>Rows</th><th>Errors</th><th>Warnings</th><th>Created</th></tr></thead><tbody>{recentJobs.map(r=><tr key={r.id}><td><a href={'/imports?job='+r.id}><b>{r.filename}</b></a></td><td>{r.type}</td><td><span className={r.status==='COMPLETED'?'badge ok':r.status==='VALIDATED'?'badge warn':r.status==='FAILED'||r.status==='COMPLETED_WITH_ERRORS'?'badge danger':'badge'}>{r.status}</span></td><td>{r.successRows}</td><td>{r.errorRows}</td><td>{r.warningRows}</td><td>{r.createdAt.toISOString().slice(0,10)}</td></tr>)}</tbody></table></div></div>
     {job&&<div className="section stack">
       {q.committed&&<div className="notice">Import committed successfully. Import history ID: <b>{job.id}</b></div>}
       <div className="card"><h2>2. Review result</h2><p><b>{job.filename}</b> · {job.type} · status {job.status}</p>
