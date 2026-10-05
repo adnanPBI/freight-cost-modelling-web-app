@@ -1,4 +1,4 @@
-import ExcelJS from 'exceljs';
+import ExcelJS from '@andreeewill/exceljs';
 
 export type ExportMeta={user:string;reference?:string;filters?:string;tenant?:string};
 
