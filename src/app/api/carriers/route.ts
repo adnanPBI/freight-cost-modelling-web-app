@@ -32,7 +32,7 @@ export async function POST(req:Request){
       await tx.auditEvent.create({data:{tenantId:session.tenantId,userId:session.id,entityType:'Carrier',entityId:created.id,action:'CREATE',summary:`Created carrier ${name}`}});
       return created;
     });
-    if(wantsJson(req))return NextResponse.json(result);return NextResponse.redirect(new URL('/carriers',req.url),303);
+    if(wantsJson(req))return NextResponse.json(result);return redirect303('/carriers');
   }catch(e){return apiError(e);}
 }
 

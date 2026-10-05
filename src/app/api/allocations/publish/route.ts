@@ -13,6 +13,6 @@ export async function POST(req:Request){
     if(!keyId) throw new Error('Allocation key ID is required.');
     const result=await publishAllocationKey(session.tenantId,keyId,session.id);
     if(wantsJson(req)) return NextResponse.json(result);
-    return NextResponse.redirect(new URL('/allocations?key='+result.id,req.url),303);
+    return redirect303('/allocations?key='+result.id);
   }catch(error){return apiError(error);}
 }
