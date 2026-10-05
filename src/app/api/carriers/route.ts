@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { appendRevision } from '@/lib/history';
 import { apiError, requireApiSession, wantsJson } from '@/lib/http';
+import { publicUrl } from '@/lib/public-url';
 
 export async function GET(req:Request){
   try{
