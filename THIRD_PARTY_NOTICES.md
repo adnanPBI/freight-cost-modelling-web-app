@@ -9,7 +9,7 @@ The Carrier Rate & Allocation Platform uses third-party packages. Those packages
 | Prisma / @prisma/client | PostgreSQL ORM/tooling | Apache-2.0 |
 | bcryptjs | Password hashing | MIT |
 | jose | Signed session tokens | MIT |
-| ExcelJS | XLSX import/export | MIT |
+| @andreeewill/exceljs | Security-patched ExcelJS-compatible XLSX import/export | MIT |
 | Zod | Validation utilities | MIT |
 | Vitest | Automated tests | MIT |
 | TypeScript | Build tooling | Apache-2.0 |
