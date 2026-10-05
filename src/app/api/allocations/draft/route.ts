@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { apiError, requireApiSession, wantsJson } from '@/lib/http';
 import { createDraftFromActive, removeDraftRule, saveDraftRule } from '@/lib/allocation';
+import { publicUrl } from '@/lib/public-url';
 
 export async function POST(req:Request){
   try{
