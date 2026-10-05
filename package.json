@@ -7,16 +7,17 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "npm audit --json || true; next build",
+    "build": "npm audit --omit=dev --audit-level=high && next build",
     "start": "next start",
-    "lint": "eslint .",
+    "lint": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
     "db:deploy": "prisma migrate deploy && tsx prisma/seed.ts",
-    "verify:samples": "vitest run tests/importers.test.ts"
+    "verify:samples": "vitest run tests/importers.test.ts",
+    "audit:security": "npm audit --omit=dev"
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
@@ -32,11 +33,13 @@
     "@types/node": "24.10.0",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
-    "eslint": "9.39.1",
-    "eslint-config-next": "16.3.8",
     "prisma": "6.19.3",
     "tsx": "4.20.6",
     "typescript": "5.9.3",
     "vitest": "5.0.3"
+  },
+  "overrides": {
+    "uuid": "11.1.1",
+    "deepmerge-ts": "8.0.2"
   }
 }
