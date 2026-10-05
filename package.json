@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/emit-lockfile.cjs && npm audit --omit=dev --audit-level=high && next build",
+    "build": "npm test && npm audit --omit=dev --audit-level=high && next build",
     "start": "next start",
     "lint": "tsc --noEmit",
     "test": "vitest run",
