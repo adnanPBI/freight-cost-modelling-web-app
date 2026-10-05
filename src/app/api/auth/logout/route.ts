@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { destroySession } from '@/lib/auth';
 import { apiError, requireApiSession } from '@/lib/http';
-import { publicUrl } from '@/lib/public-url';
+import { redirect303 } from '@/lib/public-url';
 
 export async function POST(req:Request){
   try{

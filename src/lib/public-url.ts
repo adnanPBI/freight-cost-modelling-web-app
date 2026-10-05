@@ -1,3 +1,14 @@
+export function redirect303(path:string){
+  if(!path.startsWith('/')) throw new Error('Redirect path must be relative');
+  return new Response(null,{
+    status:303,
+    headers:{
+      Location:path,
+      'Cache-Control':'no-store'
+    }
+  });
+}
+
 export function publicUrl(req:Request,path:string){
   const configured=(process.env.APP_BASE_URL||'').trim().replace(/\/$/,'');
   if(configured) return new URL(path,configured+'/');
