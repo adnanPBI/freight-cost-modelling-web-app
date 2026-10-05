@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { apiError, requireApiSession, wantsJson } from '@/lib/http';
+import { publicUrl } from '@/lib/public-url';
 
 export async function POST(req:Request){
   try{
