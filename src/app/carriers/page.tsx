@@ -7,7 +7,12 @@ export default async function Page({searchParams}:{searchParams:Promise<{id?:str
   const session=await AuthGate(); const q=await searchParams;
   const carriers=await prisma.carrier.findMany({where:{tenantId:session.tenantId},include:{aliases:true,rateCards:{include:{dc:true,mode:true}},allocations:{include:{lane:true}}},orderBy:{name:'asc'}});
   const selected=q.id?carriers.find(c=>c.id===q.id):null;
-  return <AppShell><PageHeader eyebrow="Master data" title="Carriers"/>
+  const activeCount=carriers.filter(c=>c.active).length;
+  const contractedScopes=new Set(carriers.flatMap(c=>c.rateCards.filter(r=>r.commercialStatus==='CONTRACTED_ACTIVE').map(r=>r.dcId+'|'+r.modeId))).size;
+  const rateVersions=carriers.reduce((sum,c)=>sum+c.rateCards.length,0);
+  const allocationRules=carriers.reduce((sum,c)=>sum+c.allocations.length,0);
+  return <AppShell><PageHeader eyebrow="Master data" title="Carriers" description="Maintain carrier identities, aliases, commercial coverage and allocation participation from one governed master-data view."/>
+    <div className="summaryStrip"><div className="summaryCell"><div className="summaryLabel">Active carriers</div><div className="summaryValue">{activeCount}</div><div className="summaryNote">Enabled for operational use</div></div><div className="summaryCell"><div className="summaryLabel">Contracted scopes</div><div className="summaryValue">{contractedScopes}</div><div className="summaryNote">DC / mode combinations</div></div><div className="summaryCell"><div className="summaryLabel">Rate-card versions</div><div className="summaryValue">{rateVersions}</div><div className="summaryNote">Historic and current</div></div><div className="summaryCell"><div className="summaryLabel">Allocation rules</div><div className="summaryValue">{allocationRules}</div><div className="summaryNote">Across active and historical keys</div></div></div>
     <div className="two">
       <div className="tableWrap"><table className="table"><thead><tr><th>Code</th><th>Carrier</th><th>Aliases</th><th>DCs / modes</th><th>Status</th></tr></thead><tbody>{carriers.map(c=>{
         const scopes=[...new Set(c.rateCards.map(r=>r.dc.code+' / '+r.mode.code))];
