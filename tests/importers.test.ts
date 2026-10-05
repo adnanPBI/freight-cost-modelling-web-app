@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import ExcelJS from '@andreeewill/exceljs';
+import ExcelJS from '@ayocore/exceljs';
 import { findRegionByLongestPrefix, normalizePostcode, parseAllocationWorkbook, parsePostcodeWorkbook, parseRateWorkbook, parseVolumeWorkbook } from '../src/lib/importers';
 
 async function bytes(wb:ExcelJS.Workbook){return Buffer.from(await wb.xlsx.writeBuffer() as ArrayBuffer);}
