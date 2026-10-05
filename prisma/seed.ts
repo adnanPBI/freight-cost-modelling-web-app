@@ -1,3 +1,4 @@
+import { seedDemoData } from './demo-seed';
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 
@@ -37,17 +38,20 @@ async function main(){
 
   const email=process.env.SEED_ADMIN_EMAIL?.trim().toLowerCase();
   const password=process.env.SEED_ADMIN_PASSWORD;
+  let adminUserId:string|undefined;
   if(email&&password){
     if(password.length<12) throw new Error('SEED_ADMIN_PASSWORD must be at least 12 characters.');
     const passwordHash=await bcrypt.hash(password,12);
-    await prisma.user.upsert({
+    const admin=await prisma.user.upsert({
       where:{tenantId_email:{tenantId:tenant.id,email}},
       update:{passwordHash,name:process.env.SEED_ADMIN_NAME?.trim()||'Platform Admin',active:true,role:'ADMIN'},
       create:{tenantId:tenant.id,email,passwordHash,name:process.env.SEED_ADMIN_NAME?.trim()||'Platform Admin',role:'ADMIN'}
     });
+    adminUserId=admin.id;
   }else if(process.env.NODE_ENV==='production'){
     console.log('SEED_ADMIN_EMAIL/PASSWORD not set; master/config seed completed without creating a user.');
   }
+  if(String(process.env.SEED_DEMO_DATA||'').toLowerCase()==='true') await seedDemoData(prisma,tenant.id,adminUserId);
   console.log('Idempotent tenant bootstrap complete.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;}).finally(()=>prisma.$disconnect());
